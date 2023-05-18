@@ -78,6 +78,10 @@ void AAliceCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAliceCharacter::Look);
 
+		//Crouching
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AAliceCharacter::CrouchButtonPressed);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AAliceCharacter::CrouchButtonReleased);
+
 	}
 
 }
@@ -86,7 +90,6 @@ void AAliceCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-
 	if (Controller != nullptr)
 	{
 		// find out which way is forward
@@ -116,6 +119,16 @@ void AAliceCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void AAliceCharacter::CrouchButtonPressed()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Crouch button pressed"));
+	bIsCrouched ? UnCrouch() : Crouch();
+}
+
+void AAliceCharacter::CrouchButtonReleased()
+{
 }
 
 

@@ -17,6 +17,11 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "TTToolbox",
+			"Enabled": true,
+			"MarketplaceURL": "https://github.com/tuatec/TTToolbox/releases"
 		}
 	]
 }
