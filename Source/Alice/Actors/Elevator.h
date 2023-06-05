@@ -8,12 +8,12 @@
 
 UENUM(BlueprintType)
 enum class EElevatorState : uint8 {
-	IDLE			UMETA(DisplayName = "Idle"),
-	GOING_UP		UMETA(DisplayName = "Going Up"),
-	GOING_DOWN		UMETA(DisplayName = "Going Down"),
-	DOORS_OPENING	UMETA(DisplayName = "Doors Opening"),
-	DOORS_CLOSING	UMETA(DisplayName = "Doors Closing"),
-	WAITING			UMETA(DisplayName = "Waiting For Occupants")
+	IDLE					UMETA(DisplayName = "Idle"),
+	MOVING_UP				UMETA(DisplayName = "Moving Up"),
+	MOVING_DOWN				UMETA(DisplayName = "Moving Down"),
+	DOORS_OPENING			UMETA(DisplayName = "Doors Opening"),
+	DOORS_CLOSING			UMETA(DisplayName = "Doors Closing"),
+	WAITING					UMETA(DisplayName = "Waiting For Occupants")
 };
 
 UCLASS()
@@ -26,10 +26,13 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:	
 	virtual void Tick(float DeltaTime) override;
 	void NewFloorRequested(int32 FloorNum);
+
+
 	void MoveToFloor(int32 FloorNum, float DeltaTime);
 
 private:
@@ -51,17 +54,32 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> SmallDoor;
 
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<class UBoxComponent> FloorOverlapBox;
+
 	UPROPERTY(EditAnywhere)
 	TArray<TObjectPtr<class AElevatorFloor>> Floors;
 
-	int32 CurrentFloor = 1;
-	int32 NextFloor = 0;
+	TQueue<int32> FloorQueue;
 
+	UPROPERTY(Replicated, VisibleAnywhere)
+	int32 CurrentFloor = 1;
+	UPROPERTY(Replicated, VisibleAnywhere)
+	int32 TargetFloor = 0;
+
+	UPROPERTY(Replicated, VisibleAnywhere)
 	EElevatorState ElevatorState = EElevatorState::IDLE;
 
 	UPROPERTY(EditAnywhere)
 	float ElevatorMoveSpeed = 20.f;
 
+	UPROPERTY(EditAnywhere)
+	float ElevatorWaitTime = 5.f;
+
+	FTimerHandle WaitTimer;
+
+	UFUNCTION()
+	void OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	void OpenDoors();
 	void CloseDoors();
 };

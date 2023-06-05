@@ -5,7 +5,6 @@
 #include "Elevator.h"
 #include "Components/SphereComponent.h"
 
-// Sets default values
 AElevatorFloor::AElevatorFloor()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -26,7 +25,6 @@ AElevatorFloor::AElevatorFloor()
 	ButtonOverlapSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-// Called when the game starts or when spawned
 void AElevatorFloor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -45,7 +43,6 @@ void AElevatorFloor::BeginPlay()
 	}
 }
 
-// Called every frame
 void AElevatorFloor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
