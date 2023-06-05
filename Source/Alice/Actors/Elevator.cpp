@@ -50,8 +50,6 @@ void AElevator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//UE_LOG(LogTemp, Warning, TEXT("%d ElevatorState: %d, FloorQueue: %d"), HasAuthority(), ElevatorState, FloorQueue.IsEmpty());
-
 	if (ElevatorState == EElevatorState::MOVING_UP || ElevatorState == EElevatorState::MOVING_DOWN)
 	{
 		MoveToFloor(TargetFloor, DeltaTime);
@@ -70,13 +68,11 @@ void AElevator::Tick(float DeltaTime)
 			{
 				// Doors Opened
 				ElevatorState = EElevatorState::WAITING;
-				GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
-				UE_LOG(LogTemp, Warning, TEXT("Timer started %d"), WaitTimer.IsValid());
+				if (HasAuthority()) GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
 			}
 			else
 			{
-				// Doors Closed
-				// Check for queued calls
+				// Doors Closed, Check for queued calls
 				if (FloorQueue.IsEmpty())
 				{
 					ElevatorState = EElevatorState::IDLE;
@@ -106,6 +102,11 @@ void AElevator::MoveToFloor(int32 FloorNum, float DeltaTime)
 // Called from ElevatorFloor only on server
 void AElevator::NewFloorRequested(int32 FloorNum)
 {
+	MulticastNewFloorRequested(FloorNum);
+}
+
+void AElevator::MulticastNewFloorRequested_Implementation(int32 FloorNum)
+{
 	if ((ElevatorState == EElevatorState::IDLE || ElevatorState == EElevatorState::DOORS_CLOSING) && CurrentFloor == FloorNum) // Same floor, open door
 	{
 		OpenDoors();
@@ -131,10 +132,19 @@ void AElevator::OpenDoors()
 
 void AElevator::CloseDoors()
 {
+	UE_LOG(LogTemp, Warning, TEXT("%d Close doors requested"), HasAuthority());
 	LargeDoorTarget = LargeDoorClosePos;
 	SmallDoorTarget = SmallDoorClosePos;
 	Floors[CurrentFloor - 1]->CloseDoors();
 	ElevatorState = EElevatorState::DOORS_CLOSING;
+}
+
+void AElevator::OnRep_ElevatorState()
+{
+	if (ElevatorState == EElevatorState::DOORS_CLOSING)
+	{
+		CloseDoors();
+	}
 }
 
 void AElevator::OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

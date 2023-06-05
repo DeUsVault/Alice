@@ -32,6 +32,9 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void NewFloorRequested(int32 FloorNum);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastNewFloorRequested(int32 FloorNum);
+
 
 	void MoveToFloor(int32 FloorNum, float DeltaTime);
 
@@ -67,7 +70,7 @@ private:
 	UPROPERTY(Replicated, VisibleAnywhere)
 	int32 TargetFloor = 0;
 
-	UPROPERTY(Replicated, VisibleAnywhere)
+	UPROPERTY(ReplicatedUsing = OnRep_ElevatorState, VisibleAnywhere)
 	EElevatorState ElevatorState = EElevatorState::IDLE;
 
 	UPROPERTY(EditAnywhere)
@@ -82,4 +85,7 @@ private:
 	void OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	void OpenDoors();
 	void CloseDoors();
+
+	UFUNCTION()
+	void OnRep_ElevatorState();
 };
