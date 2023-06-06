@@ -70,7 +70,7 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class USphereComponent> ButtonOverlapSphere;
 
-	UPROPERTY(Replicated, VisibleAnywhere)
+	UPROPERTY(ReplicatedUsing = OnRep_CallButtonPressed, VisibleAnywhere)
 	bool bCallButtonPressed = false;
 
 // Getters and Setters
@@ -78,5 +78,7 @@ public:
 	int32 GetFloorNumber() { return FloorNumber; }
 	void SetFloorNumber(int32 FloorNum) { FloorNumber = FloorNum; }
 	void SetCallButtonPressed(bool pressed);
+	UFUNCTION()
+	void OnRep_CallButtonPressed();
 
 };

@@ -64,23 +64,26 @@ void AElevator::Tick(float DeltaTime)
 			LargeDoor->SetRelativeLocation(LargeDoorTarget);
 			SmallDoor->SetRelativeLocation(SmallDoorTarget);
 			
-			if (ElevatorState == EElevatorState::DOORS_OPENING)
+			if (HasAuthority())
 			{
-				// Doors Opened
-				ElevatorState = EElevatorState::WAITING;
-				if (HasAuthority()) GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
-			}
-			else
-			{
-				// Doors Closed, Check for queued calls
-				if (FloorQueue.IsEmpty())
+				if (ElevatorState == EElevatorState::DOORS_OPENING)
 				{
-					ElevatorState = EElevatorState::IDLE;
+					// Doors Opened
+					ElevatorState = EElevatorState::WAITING;
+					GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
 				}
 				else
 				{
-					FloorQueue.Dequeue(TargetFloor);
-					ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
+					// Doors Closed, Check for queued calls
+					if (FloorQueue.IsEmpty())
+					{
+						ElevatorState = EElevatorState::IDLE;
+					}
+					else
+					{
+						FloorQueue.Dequeue(TargetFloor);
+						ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
+					}
 				}
 			}
 		}
@@ -102,11 +105,6 @@ void AElevator::MoveToFloor(int32 FloorNum, float DeltaTime)
 
 // Called from ElevatorFloor only on server
 void AElevator::NewFloorRequested(int32 FloorNum)
-{
-	MulticastNewFloorRequested(FloorNum);
-}
-
-void AElevator::MulticastNewFloorRequested_Implementation(int32 FloorNum)
 {
 	if ((ElevatorState == EElevatorState::IDLE || ElevatorState == EElevatorState::DOORS_CLOSING) && CurrentFloor == FloorNum) // Same floor, open door
 	{
@@ -147,6 +145,10 @@ void AElevator::OnRep_ElevatorState()
 	if (ElevatorState == EElevatorState::DOORS_CLOSING)
 	{
 		CloseDoors();
+	}
+	else if (ElevatorState == EElevatorState::DOORS_OPENING)
+	{
+		OpenDoors();
 	}
 }
 

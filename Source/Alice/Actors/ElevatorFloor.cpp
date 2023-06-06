@@ -91,3 +91,8 @@ void AElevatorFloor::SetCallButtonPressed(bool pressed)
 	Button->SetVisibility(!pressed);
 }
 
+void AElevatorFloor::OnRep_CallButtonPressed()
+{
+	Button->SetVisibility(!bCallButtonPressed);
+}
+

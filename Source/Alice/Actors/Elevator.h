@@ -32,10 +32,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void NewFloorRequested(int32 FloorNum);
 
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastNewFloorRequested(int32 FloorNum);
-
-
 	void MoveToFloor(int32 FloorNum, float DeltaTime);
 
 private:
