@@ -3,11 +3,13 @@
 
 #include "ElevatorFloor.h"
 #include "Elevator.h"
+#include "Net/UnrealNetwork.h"
 #include "Components/SphereComponent.h"
 
 AElevatorFloor::AElevatorFloor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 	
 	Frame = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Frame"));
 	SetRootComponent(Frame);
@@ -21,8 +23,13 @@ AElevatorFloor::AElevatorFloor()
 	Button->SetupAttachment(RootComponent);
 	ButtonOverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Button Overlap Sphere"));
 	ButtonOverlapSphere->SetupAttachment(Button);
-	ButtonOverlapSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-	ButtonOverlapSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AElevatorFloor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AElevatorFloor, bCallButtonPressed);
 }
 
 void AElevatorFloor::BeginPlay()
@@ -33,14 +40,6 @@ void AElevatorFloor::BeginPlay()
 
 	LargeDoorOpenPos = FVector(48.f, 0.f, 0.f);
 	SmallDoorOpenPos = FVector(95.f, 0.f, 0.f);
-
-	if (HasAuthority())
-	{
-		ButtonOverlapSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-		ButtonOverlapSphere->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
-		ButtonOverlapSphere->OnComponentBeginOverlap.AddDynamic(this, &AElevatorFloor::OnSphereOverlap);
-		//ButtonOverlapSphere->OnComponentEndOverlap.AddDynamic(this, &AElevatorFloor::OnSphereEndOverlap);
-	}
 }
 
 void AElevatorFloor::Tick(float DeltaTime)
@@ -80,9 +79,15 @@ void AElevatorFloor::CallElevator()
 	}
 }
 
-void AElevatorFloor::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void AElevatorFloor::Interact_Implementation()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Character is at elevator on floor %d"), FloorNumber);
+	UE_LOG(LogTemp, Warning, TEXT("Character is calling elevator on floor %d"), FloorNumber);
 	CallElevator();
+}
+
+void AElevatorFloor::SetCallButtonPressed(bool pressed)
+{
+	bCallButtonPressed = pressed;
+	Button->SetVisibility(!pressed);
 }
 

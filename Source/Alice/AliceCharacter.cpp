@@ -9,6 +9,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Alice/Interfaces/Interactable.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -60,6 +61,12 @@ void AAliceCharacter::BeginPlay()
 	}
 }
 
+void AAliceCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -81,6 +88,9 @@ void AAliceCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 		//Crouching
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AAliceCharacter::CrouchButtonPressed);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AAliceCharacter::CrouchButtonReleased);
+
+		//Interact
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AAliceCharacter::InteractButtonPressed);
 
 	}
 
@@ -129,6 +139,31 @@ void AAliceCharacter::CrouchButtonPressed()
 
 void AAliceCharacter::CrouchButtonReleased()
 {
+}
+
+void AAliceCharacter::InteractButtonPressed()
+{
+	ServerInteract();
+}
+
+void AAliceCharacter::ServerInteract_Implementation()
+{
+	FVector TraceStart = FollowCamera->GetComponentLocation();
+	if (Controller)
+	{
+		FVector TraceEnd = TraceStart + Controller->GetControlRotation().Vector() * 100.f;
+
+		FHitResult Hit;
+		bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel2);
+		if (bHit)
+		{
+			if (Hit.GetActor()->Implements<UInteractable>())
+			{
+				IInteractable::Execute_Interact(Hit.GetActor());
+			}
+		}
+	}
+	
 }
 
 

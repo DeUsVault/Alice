@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Alice/Interfaces/Interactable.h"
 #include "ElevatorFloor.generated.h"
 
 UENUM(BlueprintType)
@@ -15,18 +16,23 @@ enum class EElevatorFloorState : uint8 {
 };
 
 UCLASS()
-class ALICE_API AElevatorFloor : public AActor
+class ALICE_API AElevatorFloor : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 	
 public:	
 	AElevatorFloor();
 
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
+	void Interact();
+	virtual void Interact_Implementation() override;
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Tick(float DeltaTime) override;
 
 public:	
-	virtual void Tick(float DeltaTime) override;
 
 	void OpenDoors();
 	void CloseDoors();
@@ -64,12 +70,13 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class USphereComponent> ButtonOverlapSphere;
 
-	UFUNCTION()
-	void OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UPROPERTY(Replicated, VisibleAnywhere)
+	bool bCallButtonPressed = false;
 
 // Getters and Setters
 public:
 	int32 GetFloorNumber() { return FloorNumber; }
 	void SetFloorNumber(int32 FloorNum) { FloorNumber = FloorNum; }
+	void SetCallButtonPressed(bool pressed);
 
 };

@@ -37,6 +37,10 @@ class AAliceCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* CrouchAction;
 
+	/** Interact Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* InteractAction;
+
 public:
 	AAliceCharacter();
 	
@@ -57,6 +61,8 @@ protected:
 	// To add mapping context
 	virtual void BeginPlay();
 
+	virtual void Tick(float DeltaTime) override;
+
 public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
@@ -64,5 +70,8 @@ public:
 private:
 	void CrouchButtonPressed();
 	void CrouchButtonReleased();
+	void InteractButtonPressed();
+	UFUNCTION(Server, Reliable) //Should be rate-limited to prevent spamming reliable RPCs on keypress
+	void ServerInteract();
 };
 

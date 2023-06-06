@@ -95,6 +95,7 @@ void AElevator::MoveToFloor(int32 FloorNum, float DeltaTime)
 		// Reached TargetFloor
 		CurrentFloor = FloorNum;
 		TargetFloor = 0;
+		Floors[CurrentFloor - 1]->SetCallButtonPressed(false);
 		OpenDoors();
 	}
 }
@@ -115,10 +116,12 @@ void AElevator::MulticastNewFloorRequested_Implementation(int32 FloorNum)
 	{
 		TargetFloor = FloorNum;
 		ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
+		Floors[FloorNum - 1]->SetCallButtonPressed(true);
 	}
 	else if (FloorNum != CurrentFloor && FloorNum != TargetFloor) // Elevator is busy
 	{
 		FloorQueue.Enqueue(FloorNum);
+		Floors[FloorNum - 1]->SetCallButtonPressed(true);
 	}
 }
 
