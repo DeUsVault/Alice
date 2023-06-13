@@ -133,7 +133,6 @@ void AElevator::OpenDoors()
 
 void AElevator::CloseDoors()
 {
-	UE_LOG(LogTemp, Warning, TEXT("%d Close doors requested"), HasAuthority());
 	LargeDoorTarget = LargeDoorClosePos;
 	SmallDoorTarget = SmallDoorClosePos;
 	Floors[CurrentFloor - 1]->CloseDoors();
@@ -162,3 +161,7 @@ void AElevator::OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	}
 }
 
+void AElevator::Interact_Implementation(UPrimitiveComponent* HitComponent)
+{
+	NewFloorRequested(FCString::Atoi(*HitComponent->GetName()));
+}

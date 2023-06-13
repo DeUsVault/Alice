@@ -24,8 +24,8 @@ public:
 	AElevatorFloor();
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
-	void Interact();
-	virtual void Interact_Implementation() override;
+	void Interact(UPrimitiveComponent* HitComponent);
+	virtual void Interact_Implementation(UPrimitiveComponent* HitComponent) override;
 
 protected:
 	virtual void BeginPlay() override;

@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Alice/Interfaces/Interactable.h"
+#include "Alice/PlayerController/AlicePlayerController.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -44,6 +45,14 @@ AAliceCharacter::AAliceCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+}
+
+void AAliceCharacter::Restart()
+{
+	Super::Restart();
+
+	AAlicePlayerController* PlayerController = Cast<AAlicePlayerController>(Controller);
+	if (PlayerController) Cast<AAlicePlayerController>(Controller)->AddCharacterOverlay();
 }
 
 void AAliceCharacter::BeginPlay()
@@ -151,7 +160,7 @@ void AAliceCharacter::ServerInteract_Implementation()
 	FVector TraceStart = FollowCamera->GetComponentLocation();
 	if (Controller)
 	{
-		FVector TraceEnd = TraceStart + Controller->GetControlRotation().Vector() * 100.f;
+		FVector TraceEnd = TraceStart + Controller->GetControlRotation().Vector() * InteractRange;
 
 		FHitResult Hit;
 		bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_GameTraceChannel2);
@@ -159,7 +168,8 @@ void AAliceCharacter::ServerInteract_Implementation()
 		{
 			if (Hit.GetActor()->Implements<UInteractable>())
 			{
-				IInteractable::Execute_Interact(Hit.GetActor());
+				UE_LOG(LogTemp, Warning, TEXT("Interacting with %s"), *Hit.GetComponent()->GetName());
+				IInteractable::Execute_Interact(Hit.GetActor(), Hit.GetComponent());
 			}
 		}
 	}

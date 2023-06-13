@@ -24,5 +24,5 @@ class ALICE_API IInteractable
 public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
-	void Interact();
+	void Interact(UPrimitiveComponent* HitComponent);
 };

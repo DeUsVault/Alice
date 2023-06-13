@@ -52,6 +52,8 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	virtual void Restart() override;
 			
 
 protected:
@@ -68,6 +70,8 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+	UPROPERTY(EditAnywhere)
+	float InteractRange = 150.f;
 	void CrouchButtonPressed();
 	void CrouchButtonReleased();
 	void InteractButtonPressed();

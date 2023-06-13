@@ -79,7 +79,7 @@ void AElevatorFloor::CallElevator()
 	}
 }
 
-void AElevatorFloor::Interact_Implementation()
+void AElevatorFloor::Interact_Implementation(UPrimitiveComponent* HitComponent)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Character is calling elevator on floor %d"), FloorNumber);
 	CallElevator();

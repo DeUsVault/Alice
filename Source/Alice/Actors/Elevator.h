@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Alice/Interfaces/Interactable.h"
 #include "Elevator.generated.h"
 
 UENUM(BlueprintType)
@@ -17,7 +18,7 @@ enum class EElevatorState : uint8 {
 };
 
 UCLASS()
-class ALICE_API AElevator : public AActor
+class ALICE_API AElevator : public AActor, public IInteractable
 {
 	GENERATED_BODY()
 	
@@ -31,8 +32,11 @@ protected:
 public:	
 	virtual void Tick(float DeltaTime) override;
 	void NewFloorRequested(int32 FloorNum);
-
 	void MoveToFloor(int32 FloorNum, float DeltaTime);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
+	void Interact(UPrimitiveComponent* HitComponent);
+	virtual void Interact_Implementation(UPrimitiveComponent* HitComponent) override;
 
 private:
 	UPROPERTY(EditAnywhere)
