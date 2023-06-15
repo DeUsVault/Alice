@@ -36,7 +36,6 @@ public:
 
 	void OpenDoors();
 	void CloseDoors();
-	void CallElevator();
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -70,8 +69,13 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class USphereComponent> ButtonOverlapSphere;
 
-	UPROPERTY(ReplicatedUsing = OnRep_CallButtonPressed, VisibleAnywhere)
+	UPROPERTY(ReplicatedUsing = OnRep_bCallButtonPressed, VisibleAnywhere)
 	bool bCallButtonPressed = false;
+
+	// Sounds
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<class USoundCue> CallButtonCue;
 
 // Getters and Setters
 public:
@@ -79,6 +83,6 @@ public:
 	void SetFloorNumber(int32 FloorNum) { FloorNumber = FloorNum; }
 	void SetCallButtonPressed(bool pressed);
 	UFUNCTION()
-	void OnRep_CallButtonPressed();
+	void OnRep_bCallButtonPressed();
 
 };

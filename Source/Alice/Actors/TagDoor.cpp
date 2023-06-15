@@ -26,16 +26,27 @@ ATagDoor::ATagDoor()
 
 }
 
+void ATagDoor::SpawnGoalRoom()
+{
+	if (GoalRoomClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		GoalRoom = GetWorld()->SpawnActor<AActor>(GoalRoomClass, GetActorLocation(), FRotator(0.f, GetActorRotation().Yaw + 180.f, 0.f), SpawnParams);
+	}
+}
+
 void ATagDoor::BeginPlay()
 {
 	Super::BeginPlay();
 	
 	OpenUpdateFloat.BindDynamic(this, &ATagDoor::UpdateDoorRotation);
 	LockedUpdateFloat.BindDynamic(this, &ATagDoor::UpdateDoorRotation);
+	EventTest.BindDynamic(this, &ATagDoor::EventUpdate);
 
 	if (DoorOpenFloatCurve && DoorOpenTimeline)
 	{
 		DoorOpenTimeline->AddInterpFloat(DoorOpenFloatCurve, OpenUpdateFloat);
+		DoorOpenTimeline->AddEvent(0.1f, EventTest);
 	}
 
 	if (DoorLockedFloatCurve && DoorLockedTimeline)
@@ -65,6 +76,11 @@ void ATagDoor::Interact_Implementation(UPrimitiveComponent* HitComponent)
 	}
 	else
 	{
+		if (!GoalRoom)
+		{
+			SpawnGoalRoom();
+		}
+
 		bIsOpen = !bIsOpen;
 		if (bIsOpen)
 		{
@@ -96,6 +112,11 @@ void ATagDoor::OnRep_bIsOpen()
 void ATagDoor::UpdateDoorRotation(float Output)
 {
 	Door->SetRelativeRotation(FRotator(0.0f, Output, 0.f));
+}
+
+void ATagDoor::EventUpdate()
+{
+	if (!DoorOpenTimeline->IsReversing()) UE_LOG(LogTemp, Warning, TEXT("Event triggered: %f"), DoorOpenTimeline->GetPlaybackPosition());
 }
 
 void ATagDoor::MulticastLockedDoor_Implementation()

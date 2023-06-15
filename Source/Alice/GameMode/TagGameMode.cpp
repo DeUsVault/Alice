@@ -4,6 +4,10 @@
 #include "TagGameMode.h"
 #include "Alice/AliceCharacter.h"
 #include "Alice/PlayerController/AlicePlayerController.h"
+#include "Alice/Actors/TagDoor.h"
+#include "EngineUtils.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 
 namespace MatchState
 {
@@ -20,6 +24,8 @@ void ATagGameMode::BeginPlay()
 	Super::BeginPlay();
 
 	LevelStartingTime = GetWorld()->GetTimeSeconds();
+
+
 }
 
 void ATagGameMode::Tick(float DeltaTime)
@@ -56,6 +62,17 @@ void ATagGameMode::OnMatchStateSet()
 {
 	Super::OnMatchStateSet();
 
+	if (MatchState == MatchState::InProgress)
+	{
+		// Activate one of the doors and spawn the goal room
+		TArray<AActor*> Doors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATagDoor::StaticClass(), Doors);
+		UE_LOG(LogTemp, Warning, TEXT("Number of Doors found: %d"), Doors.Num());
+		int32 GoalDoorNumber = UKismetMathLibrary::RandomIntegerInRange(0, Doors.Num() - 1);
+		UE_LOG(LogTemp, Warning, TEXT("Selected Door: %s"), *Doors[GoalDoorNumber]->GetActorNameOrLabel());
+		ATagDoor* GoalDoor = Cast<ATagDoor>(Doors[GoalDoorNumber]);
+		GoalDoor->UnlockDoor();
+	}
 	/*for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
 		AAlicePlayerController* AlicePlayer = Cast<AAlicePlayerController>(*It);

@@ -29,6 +29,9 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	void SetElevatorPanelButton(int32 FloorNum, bool bPressed);
+	void HandleButtons(int32 FloorNum, bool bPressed);
+
 public:	
 	virtual void Tick(float DeltaTime) override;
 	void NewFloorRequested(int32 FloorNum);
@@ -60,6 +63,50 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class UBoxComponent> FloorOverlapBox;
 
+	// Buttons
+	UPROPERTY(EditAnywhere)
+	TArray<TObjectPtr<UStaticMeshComponent>> Buttons;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UMaterialInterface> ButtonDefaultMaterial;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UMaterialInterface> ButtonPressedMaterial;
+
+	UPROPERTY(ReplicatedUsing = OnRep_bButton1Pressed)
+	bool bButton1Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton2Pressed)
+	bool bButton2Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton3Pressed)
+	bool bButton3Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton4Pressed)
+	bool bButton4Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton5Pressed)
+	bool bButton5Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton6Pressed)
+	bool bButton6Pressed{ 0 };
+	UPROPERTY(ReplicatedUsing = OnRep_bButton7Pressed)
+	bool bButton7Pressed{ 0 };
+
+	UFUNCTION()
+	void OnRep_bButton1Pressed() { SetElevatorPanelButton(1, bButton1Pressed); }
+	UFUNCTION()
+	void OnRep_bButton2Pressed() { SetElevatorPanelButton(2, bButton2Pressed); }
+	UFUNCTION()
+	void OnRep_bButton3Pressed() { SetElevatorPanelButton(3, bButton3Pressed); }
+	UFUNCTION()
+	void OnRep_bButton4Pressed() { SetElevatorPanelButton(4, bButton4Pressed); }
+	UFUNCTION()
+	void OnRep_bButton5Pressed() { SetElevatorPanelButton(5, bButton5Pressed); }
+	UFUNCTION()
+	void OnRep_bButton6Pressed() { SetElevatorPanelButton(6, bButton6Pressed); }
+	UFUNCTION()
+	void OnRep_bButton7Pressed() { SetElevatorPanelButton(7, bButton7Pressed); }
+
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UAudioComponent> AudioComponent;
+
 	UPROPERTY(EditAnywhere)
 	TArray<TObjectPtr<class AElevatorFloor>> Floors;
 
@@ -88,4 +135,21 @@ private:
 
 	UFUNCTION()
 	void OnRep_ElevatorState();
+
+	// Elevator Sounds
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<class USoundCue> DoorsOpenCue;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<USoundCue> DoorsCloseCue;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<USoundCue> MovementCue;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<USoundCue> BellCue;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<USoundCue> ButtonBeepCue;
 };

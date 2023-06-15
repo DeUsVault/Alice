@@ -16,6 +16,9 @@ class ALICE_API ATagDoor : public AActor, public IInteractable
 public:	
 	ATagDoor();
 
+	void UnlockDoor() { bIsLocked = false; }
+	void SpawnGoalRoom();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -46,6 +49,12 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> Knob;
 
+	// Goal Room Spawning
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> GoalRoomClass;
+	TObjectPtr<AActor> GoalRoom;
+
 	// Door 'Animations'
 
 	UPROPERTY(ReplicatedUsing = OnRep_bIsOpen)
@@ -61,9 +70,13 @@ private:
 	
 	FOnTimelineFloat OpenUpdateFloat;
 	FOnTimelineFloat LockedUpdateFloat;
+	FOnTimelineEvent EventTest;
 	
 	UFUNCTION()
 	void UpdateDoorRotation(float Output);
+
+	UFUNCTION()
+	void EventUpdate();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastLockedDoor();

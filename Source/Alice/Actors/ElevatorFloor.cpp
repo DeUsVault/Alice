@@ -5,6 +5,8 @@
 #include "Elevator.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/SphereComponent.h"
+#include "Sound/SoundCue.h"
+#include "Kismet/GameplayStatics.h"
 
 AElevatorFloor::AElevatorFloor()
 {
@@ -71,28 +73,33 @@ void AElevatorFloor::CloseDoors()
 	FloorState = EElevatorFloorState::CLOSING;
 }
 
-void AElevatorFloor::CallElevator()
+void AElevatorFloor::Interact_Implementation(UPrimitiveComponent* HitComponent)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Character is calling elevator on floor %d"), FloorNumber);
 	if (Elevator)
 	{
 		Elevator->NewFloorRequested(FloorNumber);
 	}
 }
 
-void AElevatorFloor::Interact_Implementation(UPrimitiveComponent* HitComponent)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Character is calling elevator on floor %d"), FloorNumber);
-	CallElevator();
-}
-
+// Should only be called from Server (OnRep for clients)
 void AElevatorFloor::SetCallButtonPressed(bool pressed)
 {
 	bCallButtonPressed = pressed;
 	Button->SetVisibility(!pressed);
+
+	if (pressed && CallButtonCue)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+	}
 }
 
-void AElevatorFloor::OnRep_CallButtonPressed()
+void AElevatorFloor::OnRep_bCallButtonPressed()
 {
 	Button->SetVisibility(!bCallButtonPressed);
+	if (bCallButtonPressed && CallButtonCue)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+	}
 }
 

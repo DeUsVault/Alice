@@ -7,7 +7,7 @@
 
 AElevatorButton::AElevatorButton()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	ButtonMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Button Mesh"));
 	SetRootComponent(ButtonMesh);
@@ -21,12 +21,6 @@ void AElevatorButton::BeginPlay()
 {
 	Super::BeginPlay();
 	
-}
-
-void AElevatorButton::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
 }
 
 void AElevatorButton::Interact_Implementation(UPrimitiveComponent* HitComponent)

@@ -5,6 +5,9 @@
 #include "ElevatorFloor.h"
 #include "Net/UnrealNetwork.h"
 #include "Components/BoxComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 AElevator::AElevator()
@@ -20,6 +23,24 @@ AElevator::AElevator()
 	LargeDoor->SetupAttachment(RootComponent);
 	SmallDoor = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Small Door"));
 	SmallDoor->SetupAttachment(RootComponent);
+	AudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio Component"));
+	AudioComponent->SetupAttachment(RootComponent);
+
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 1 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 2 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 3 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 4 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 5 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 6 Button")));
+	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 7 Button")));
+
+	ButtonDefaultMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Default Button Material"));
+	ButtonPressedMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Pressed Button Material"));
+
+	for (UStaticMeshComponent* Button : Buttons)
+	{
+		Button->SetupAttachment(RootComponent);
+	}
 }
 
 void AElevator::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -29,6 +50,13 @@ void AElevator::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 	DOREPLIFETIME(AElevator, CurrentFloor);
 	DOREPLIFETIME(AElevator, TargetFloor);
 	DOREPLIFETIME(AElevator, ElevatorState);
+	DOREPLIFETIME(AElevator, bButton1Pressed);
+	DOREPLIFETIME(AElevator, bButton2Pressed);
+	DOREPLIFETIME(AElevator, bButton3Pressed);
+	DOREPLIFETIME(AElevator, bButton4Pressed);
+	DOREPLIFETIME(AElevator, bButton5Pressed);
+	DOREPLIFETIME(AElevator, bButton6Pressed);
+	DOREPLIFETIME(AElevator, bButton7Pressed);
 }
 
 void AElevator::BeginPlay()
@@ -63,6 +91,7 @@ void AElevator::Tick(float DeltaTime)
 		{
 			LargeDoor->SetRelativeLocation(LargeDoorTarget);
 			SmallDoor->SetRelativeLocation(SmallDoorTarget);
+			AudioComponent->Stop();
 			
 			if (HasAuthority())
 			{
@@ -83,6 +112,11 @@ void AElevator::Tick(float DeltaTime)
 					{
 						FloorQueue.Dequeue(TargetFloor);
 						ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
+						if (MovementCue)
+						{
+							AudioComponent->SetSound(MovementCue);
+							AudioComponent->Play(0.f);
+						}
 					}
 				}
 			}
@@ -96,10 +130,13 @@ void AElevator::MoveToFloor(int32 FloorNum, float DeltaTime)
 	if (GetActorLocation() == Floors[FloorNum - 1]->GetActorLocation())
 	{
 		// Reached TargetFloor
-		CurrentFloor = FloorNum;
-		TargetFloor = 0;
-		Floors[CurrentFloor - 1]->SetCallButtonPressed(false);
-		OpenDoors();
+		if (HasAuthority())
+		{
+			CurrentFloor = FloorNum;
+			TargetFloor = 0;
+			HandleButtons(FloorNum, false);
+			OpenDoors();
+		}
 	}
 }
 
@@ -113,18 +150,32 @@ void AElevator::NewFloorRequested(int32 FloorNum)
 	else if (ElevatorState == EElevatorState::IDLE && CurrentFloor != FloorNum) // Go directly to the new floor
 	{
 		TargetFloor = FloorNum;
+		HandleButtons(FloorNum, true);
 		ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
-		Floors[FloorNum - 1]->SetCallButtonPressed(true);
+		if (MovementCue)
+		{
+			AudioComponent->SetSound(MovementCue);
+			AudioComponent->Play(0.f);
+		}
 	}
-	else if (FloorNum != CurrentFloor && FloorNum != TargetFloor) // Elevator is busy
+	else if (FloorNum != CurrentFloor && FloorNum != TargetFloor) // Elevator is busy, queue new floor
 	{
 		FloorQueue.Enqueue(FloorNum);
-		Floors[FloorNum - 1]->SetCallButtonPressed(true);
+		HandleButtons(FloorNum, true);
 	}
 }
 
 void AElevator::OpenDoors()
 {
+	if (DoorsOpenCue)
+	{
+		AudioComponent->SetSound(DoorsOpenCue);
+		AudioComponent->Play(0.f);
+	}
+	if (BellCue)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, BellCue, AudioComponent->GetComponentLocation());
+	}
 	LargeDoorTarget = LargeDoorOpenPos;
 	SmallDoorTarget = SmallDoorOpenPos;
 	Floors[CurrentFloor - 1]->OpenDoors();
@@ -133,6 +184,11 @@ void AElevator::OpenDoors()
 
 void AElevator::CloseDoors()
 {
+	if (DoorsCloseCue)
+	{
+		AudioComponent->SetSound(DoorsCloseCue);
+		AudioComponent->Play(0.f);
+	}
 	LargeDoorTarget = LargeDoorClosePos;
 	SmallDoorTarget = SmallDoorClosePos;
 	Floors[CurrentFloor - 1]->CloseDoors();
@@ -149,6 +205,14 @@ void AElevator::OnRep_ElevatorState()
 	{
 		OpenDoors();
 	}
+	else if (ElevatorState == EElevatorState::MOVING_UP || ElevatorState == EElevatorState::MOVING_DOWN)
+	{
+		if (MovementCue)
+		{
+			AudioComponent->SetSound(MovementCue);
+			AudioComponent->Play(0.f);
+		}
+	}
 }
 
 void AElevator::OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -163,5 +227,59 @@ void AElevator::OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 
 void AElevator::Interact_Implementation(UPrimitiveComponent* HitComponent)
 {
-	NewFloorRequested(FCString::Atoi(*HitComponent->GetName()));
+	int32 FloorNumber = FCString::Atoi(*HitComponent->GetName());
+	NewFloorRequested(FloorNumber);
+}
+
+void AElevator::SetElevatorPanelButton(int32 FloorNum, bool bPressed)
+{
+	if (bPressed)
+	{
+		Buttons[FloorNum - 1]->SetMaterial(0, ButtonPressedMaterial);
+		if (ButtonBeepCue)
+		{
+			UGameplayStatics::PlaySoundAtLocation(this, ButtonBeepCue, Buttons[FloorNum - 1]->GetComponentLocation());
+		}
+	}
+	else
+	{
+		Buttons[FloorNum - 1]->SetMaterial(0, ButtonDefaultMaterial);
+	}
+}
+
+// Call from Server
+void AElevator::HandleButtons(int32 FloorNum, bool bPressed)
+{
+	// Set Panel Buttons
+	switch (FloorNum)
+	{
+	case 1:
+		bButton1Pressed = bPressed;
+		break;
+	case 2:
+		bButton2Pressed = bPressed;
+		break;
+	case 3:
+		bButton3Pressed = bPressed;
+		break;
+	case 4:
+		bButton4Pressed = bPressed;
+		break;
+	case 5:
+		bButton5Pressed = bPressed;
+		break;
+	case 6:
+		bButton6Pressed = bPressed;
+		break;
+	case 7:
+		bButton7Pressed = bPressed;
+		break;
+	default:
+		UE_LOG(LogTemp, Warning, TEXT("Invalid elevator floor requested: %d"), FloorNum);
+	}
+	SetElevatorPanelButton(FloorNum, bPressed);
+	
+	// Set Call Buttons
+	Floors[FloorNum - 1]->SetCallButtonPressed(bPressed);
+
 }
