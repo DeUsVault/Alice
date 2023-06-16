@@ -23,6 +23,8 @@ AElevator::AElevator()
 	LargeDoor->SetupAttachment(RootComponent);
 	SmallDoor = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Small Door"));
 	SmallDoor->SetupAttachment(RootComponent);
+	InteriorPanel = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Interior Panel"));
+	InteriorPanel->SetupAttachment(RootComponent);
 	AudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio Component"));
 	AudioComponent->SetupAttachment(RootComponent);
 	DoorOpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Open Timeline"));
@@ -35,13 +37,13 @@ AElevator::AElevator()
 	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 6 Button")));
 	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 7 Button")));
 
-	ButtonDefaultMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Default Button Material"));
-	ButtonPressedMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Pressed Button Material"));
-
 	for (UStaticMeshComponent* Button : Buttons)
 	{
-		Button->SetupAttachment(RootComponent);
+		Button->SetupAttachment(InteriorPanel);
 	}
+
+	ButtonDefaultMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Default Button Material"));
+	ButtonPressedMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Pressed Button Material"));
 }
 
 void AElevator::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -128,7 +130,7 @@ void AElevator::NewFloorRequested(int32 FloorNum)
 	}
 	else if (FloorNum != CurrentFloor && FloorNum != TargetFloor) // Elevator is busy, queue new floor
 	{
-		FloorQueue.Enqueue(FloorNum);
+		FloorQueue.AddUnique(FloorNum);
 		HandleButtons(FloorNum, true);
 	}
 }
@@ -174,8 +176,9 @@ void AElevator::CheckElevatorQueue()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Next Floor from queue is: Floor %d"), *FloorQueue.Peek());
-			FloorQueue.Dequeue(TargetFloor);
+			UE_LOG(LogTemp, Warning, TEXT("Next floor is now: Floor %d"), FloorQueue[0]);
+			TargetFloor = FloorQueue[0];
+			FloorQueue.Remove(TargetFloor);
 			ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
 			if (MovementCue)
 			{

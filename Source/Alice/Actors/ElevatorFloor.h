@@ -59,6 +59,12 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> Button;
 
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UMaterialInterface> ButtonDefaultMaterial;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UMaterialInterface> ButtonPressedMaterial;
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class USphereComponent> ButtonOverlapSphere;
 

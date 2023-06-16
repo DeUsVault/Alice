@@ -58,6 +58,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> SmallDoor;
 
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStaticMeshComponent> InteriorPanel;
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<class UBoxComponent> FloorOverlapBox;
 
@@ -108,7 +111,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	TArray<TObjectPtr<class AElevatorFloor>> Floors;
 
-	TQueue<int32> FloorQueue;
+	TArray<int32> FloorQueue;
 
 	UPROPERTY(Replicated, VisibleAnywhere)
 	int32 CurrentFloor = 1;

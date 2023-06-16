@@ -25,6 +25,8 @@ AElevatorFloor::AElevatorFloor()
 	Button->SetupAttachment(RootComponent);
 	ButtonOverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Button Overlap Sphere"));
 	ButtonOverlapSphere->SetupAttachment(Button);
+	ButtonDefaultMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Default Button Material"));
+	ButtonPressedMaterial = CreateDefaultSubobject<UMaterialInterface>(TEXT("Pressed Button Material"));
 
 	DoorOpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Open Timeline"));
 }
@@ -75,20 +77,28 @@ void AElevatorFloor::Interact_Implementation(UPrimitiveComponent* HitComponent)
 void AElevatorFloor::SetCallButtonPressed(bool pressed)
 {
 	bCallButtonPressed = pressed;
-	Button->SetVisibility(!pressed);
 
-	if (pressed && CallButtonCue)
+	if (pressed)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+		if (CallButtonCue) UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+		Button->SetMaterial(0, ButtonPressedMaterial);
+	}
+	else
+	{
+		Button->SetMaterial(0, ButtonDefaultMaterial);
 	}
 }
 
 void AElevatorFloor::OnRep_bCallButtonPressed()
 {
-	Button->SetVisibility(!bCallButtonPressed);
-	if (bCallButtonPressed && CallButtonCue)
+	if (bCallButtonPressed)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+		if (CallButtonCue) UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
+		Button->SetMaterial(0, ButtonPressedMaterial);
+	}
+	else
+	{
+		Button->SetMaterial(0, ButtonDefaultMaterial);
 	}
 }
 
