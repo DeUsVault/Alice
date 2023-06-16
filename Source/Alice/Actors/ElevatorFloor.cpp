@@ -10,7 +10,7 @@
 
 AElevatorFloor::AElevatorFloor()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 	
 	Frame = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Frame"));
@@ -25,6 +25,8 @@ AElevatorFloor::AElevatorFloor()
 	Button->SetupAttachment(RootComponent);
 	ButtonOverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("Button Overlap Sphere"));
 	ButtonOverlapSphere->SetupAttachment(Button);
+
+	DoorOpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Open Timeline"));
 }
 
 void AElevatorFloor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -40,36 +42,23 @@ void AElevatorFloor::BeginPlay()
 
 	FloorState = EElevatorFloorState::CLOSED;
 
-	LargeDoorOpenPos = FVector(48.f, 0.f, 0.f);
-	SmallDoorOpenPos = FVector(95.f, 0.f, 0.f);
-}
+	UpdateTimelineFloat.BindDynamic(this, &AElevatorFloor::UpdateDoorPosition);
 
-void AElevatorFloor::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (FloorState == EElevatorFloorState::OPENING || FloorState == EElevatorFloorState::CLOSING)
+	if (DoorOpenFloatCurve)
 	{
-		LargeDoor->SetRelativeLocation(FMath::VInterpConstantTo(LargeDoor->GetRelativeLocation(), LargeDoorTarget, DeltaTime, DoorMoveSpeed));
-		SmallDoor->SetRelativeLocation(FMath::VInterpConstantTo(SmallDoor->GetRelativeLocation(), SmallDoorTarget, DeltaTime, DoorMoveSpeed * 2)); // Small door moves twice as far
-		if (FVector::Dist(LargeDoor->GetRelativeLocation(), LargeDoorTarget) < 1.f)
-		{
-			FloorState = FloorState == EElevatorFloorState::OPENING ? EElevatorFloorState::OPEN : EElevatorFloorState::CLOSED;
-		}
+		DoorOpenTimeline->AddInterpFloat(DoorOpenFloatCurve, UpdateTimelineFloat);
 	}
 }
 
 void AElevatorFloor::OpenDoors()
 {
-	LargeDoorTarget = LargeDoorOpenPos;
-	SmallDoorTarget = SmallDoorOpenPos;
+	DoorOpenTimeline->Play();
 	FloorState = EElevatorFloorState::OPENING;
 }
 
 void AElevatorFloor::CloseDoors()
 {
-	LargeDoorTarget = FVector::ZeroVector;
-	SmallDoorTarget = FVector::ZeroVector;
+	DoorOpenTimeline->Reverse();
 	FloorState = EElevatorFloorState::CLOSING;
 }
 
@@ -101,5 +90,11 @@ void AElevatorFloor::OnRep_bCallButtonPressed()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, CallButtonCue, Button->GetComponentLocation());
 	}
+}
+
+void AElevatorFloor::UpdateDoorPosition(float Output)
+{
+	LargeDoor->SetRelativeLocation(FVector(Output, 0.f, 0.f));
+	SmallDoor->SetRelativeLocation(FVector(Output * 2, 0.f, 0.f));
 }
 

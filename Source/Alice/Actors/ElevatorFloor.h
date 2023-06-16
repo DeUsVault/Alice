@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Alice/Interfaces/Interactable.h"
+#include "Components/TimelineComponent.h"
 #include "ElevatorFloor.generated.h"
 
 UENUM(BlueprintType)
@@ -30,7 +31,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void Tick(float DeltaTime) override;
 
 public:	
 
@@ -40,13 +40,6 @@ public:
 private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class AElevator> Elevator;
-
-	UPROPERTY(EditAnywhere)
-	float DoorMoveSpeed = 1.f;
-	FVector LargeDoorOpenPos;
-	FVector SmallDoorOpenPos;
-	FVector LargeDoorTarget;
-	FVector SmallDoorTarget;
 
 	UPROPERTY(VisibleAnywhere)
 	EElevatorFloorState FloorState;
@@ -76,6 +69,19 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<class USoundCue> CallButtonCue;
+
+	// Animations
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UTimelineComponent> DoorOpenTimeline;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UCurveFloat> DoorOpenFloatCurve;
+
+	FOnTimelineFloat UpdateTimelineFloat;
+
+	UFUNCTION()
+	void UpdateDoorPosition(float Output);
 
 // Getters and Setters
 public:

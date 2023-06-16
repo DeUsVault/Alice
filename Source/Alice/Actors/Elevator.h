@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Alice/Interfaces/Interactable.h"
+#include "Components/TimelineComponent.h"
 #include "Elevator.generated.h"
 
 UENUM(BlueprintType)
@@ -31,6 +32,11 @@ protected:
 
 	void SetElevatorPanelButton(int32 FloorNum, bool bPressed);
 	void HandleButtons(int32 FloorNum, bool bPressed);
+	
+	UFUNCTION()
+	void CheckElevatorQueue();
+	UFUNCTION()
+	void EnterWaitState();
 
 public:	
 	virtual void Tick(float DeltaTime) override;
@@ -42,14 +48,6 @@ public:
 	virtual void Interact_Implementation(UPrimitiveComponent* HitComponent) override;
 
 private:
-	UPROPERTY(EditAnywhere)
-	float DoorMoveSpeed = 20.f;
-	FVector LargeDoorClosePos;
-	FVector SmallDoorClosePos;
-	FVector LargeDoorOpenPos;
-	FVector SmallDoorOpenPos;
-	FVector LargeDoorTarget;
-	FVector SmallDoorTarget;
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> ElevatorMesh;
@@ -152,4 +150,19 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<USoundCue> ButtonBeepCue;
+
+	// Elevator Door Animations
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UTimelineComponent> DoorOpenTimeline;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UCurveFloat> DoorOpenFloatCurve;
+
+	FOnTimelineFloat UpdateTimelineFloat;
+	FOnTimelineEvent DoorsFinishedClosing;
+	FOnTimelineEvent DoorsFinishedOpening;
+
+	UFUNCTION()
+	void UpdateDoorPosition(float Output);
 };

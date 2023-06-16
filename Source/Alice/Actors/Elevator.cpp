@@ -25,6 +25,7 @@ AElevator::AElevator()
 	SmallDoor->SetupAttachment(RootComponent);
 	AudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio Component"));
 	AudioComponent->SetupAttachment(RootComponent);
+	DoorOpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Open Timeline"));
 
 	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 1 Button")));
 	Buttons.Add(CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Floor 2 Button")));
@@ -63,14 +64,22 @@ void AElevator::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	LargeDoorClosePos = LargeDoor->GetRelativeLocation();
-	SmallDoorClosePos = SmallDoor->GetRelativeLocation();
-	LargeDoorOpenPos = LargeDoorClosePos + FVector(48.f, 0.f, 0.f);
-	SmallDoorOpenPos = SmallDoorClosePos + FVector(95.f, 0.f, 0.f);
 	if (HasAuthority())
 	{
 		FloorOverlapBox->OnComponentBeginOverlap.AddDynamic(this, &AElevator::OnFloorOverlap);
 	}
+
+	UpdateTimelineFloat.BindDynamic(this, &AElevator::UpdateDoorPosition);
+	DoorsFinishedClosing.BindDynamic(this, &AElevator::CheckElevatorQueue);
+	DoorsFinishedOpening.BindDynamic(this, &AElevator::EnterWaitState);
+
+	if (DoorOpenFloatCurve)
+	{
+		DoorOpenTimeline->AddInterpFloat(DoorOpenFloatCurve, UpdateTimelineFloat);
+	}
+
+	DoorOpenTimeline->AddEvent(0.f, DoorsFinishedClosing);
+	DoorOpenTimeline->AddEvent(DoorOpenTimeline->GetTimelineLength(), DoorsFinishedOpening);
 	
 }
 
@@ -81,46 +90,6 @@ void AElevator::Tick(float DeltaTime)
 	if (ElevatorState == EElevatorState::MOVING_UP || ElevatorState == EElevatorState::MOVING_DOWN)
 	{
 		MoveToFloor(TargetFloor, DeltaTime);
-	}
-
-	if (ElevatorState == EElevatorState::DOORS_OPENING || ElevatorState == EElevatorState::DOORS_CLOSING)
-	{
-		LargeDoor->SetRelativeLocation(FMath::VInterpConstantTo(LargeDoor->GetRelativeLocation(), LargeDoorTarget, DeltaTime, DoorMoveSpeed));
-		SmallDoor->SetRelativeLocation(FMath::VInterpConstantTo(SmallDoor->GetRelativeLocation(), SmallDoorTarget, DeltaTime, DoorMoveSpeed * 2)); // Small door moves twice as far
-		if (FVector::Dist(LargeDoor->GetRelativeLocation(), LargeDoorTarget) < 1.f) // Doors finished moving, account for overshoot
-		{
-			LargeDoor->SetRelativeLocation(LargeDoorTarget);
-			SmallDoor->SetRelativeLocation(SmallDoorTarget);
-			AudioComponent->Stop();
-			
-			if (HasAuthority())
-			{
-				if (ElevatorState == EElevatorState::DOORS_OPENING)
-				{
-					// Doors Opened
-					ElevatorState = EElevatorState::WAITING;
-					GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
-				}
-				else
-				{
-					// Doors Closed, Check for queued calls
-					if (FloorQueue.IsEmpty())
-					{
-						ElevatorState = EElevatorState::IDLE;
-					}
-					else
-					{
-						FloorQueue.Dequeue(TargetFloor);
-						ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
-						if (MovementCue)
-						{
-							AudioComponent->SetSound(MovementCue);
-							AudioComponent->Play(0.f);
-						}
-					}
-				}
-			}
-		}
 	}
 }
 
@@ -140,7 +109,6 @@ void AElevator::MoveToFloor(int32 FloorNum, float DeltaTime)
 	}
 }
 
-// Called from ElevatorFloor only on server
 void AElevator::NewFloorRequested(int32 FloorNum)
 {
 	if ((ElevatorState == EElevatorState::IDLE || ElevatorState == EElevatorState::DOORS_CLOSING) && CurrentFloor == FloorNum) // Same floor, open door
@@ -176,8 +144,7 @@ void AElevator::OpenDoors()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, BellCue, AudioComponent->GetComponentLocation());
 	}
-	LargeDoorTarget = LargeDoorOpenPos;
-	SmallDoorTarget = SmallDoorOpenPos;
+	DoorOpenTimeline->Play();
 	Floors[CurrentFloor - 1]->OpenDoors();
 	ElevatorState = EElevatorState::DOORS_OPENING;
 }
@@ -189,10 +156,45 @@ void AElevator::CloseDoors()
 		AudioComponent->SetSound(DoorsCloseCue);
 		AudioComponent->Play(0.f);
 	}
-	LargeDoorTarget = LargeDoorClosePos;
-	SmallDoorTarget = SmallDoorClosePos;
+	DoorOpenTimeline->Reverse();
 	Floors[CurrentFloor - 1]->CloseDoors();
 	ElevatorState = EElevatorState::DOORS_CLOSING;
+}
+
+void AElevator::CheckElevatorQueue()
+{
+	if (DoorOpenTimeline->IsPlaying()) return; // Ignore doors opened event if they have just started closing (saves having two separate open/close timelines)
+	AudioComponent->Stop(); // Stop doors closing sound cue if it hasn't finished yet, better to trim the cue to timeline length in future
+	if (HasAuthority())
+	{
+		if (FloorQueue.IsEmpty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Floor Queue is empty"));
+			ElevatorState = EElevatorState::IDLE;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Next Floor from queue is: Floor %d"), *FloorQueue.Peek());
+			FloorQueue.Dequeue(TargetFloor);
+			ElevatorState = TargetFloor > CurrentFloor ? EElevatorState::MOVING_UP : EElevatorState::MOVING_DOWN;
+			if (MovementCue)
+			{
+				AudioComponent->SetSound(MovementCue);
+				AudioComponent->Play(0.f);
+			}
+		}
+	}
+}
+
+void AElevator::EnterWaitState()
+{
+	if (DoorOpenTimeline->IsPlaying()) return; // Ignore doors closed event if they have just started opening (saves having two separate open/close timelines)
+	AudioComponent->Stop(); // Stop doors opening sound cue if it hasn't finished yet, better to trim the cue to timeline length in future
+	if (HasAuthority())
+	{
+		ElevatorState = EElevatorState::WAITING;
+		GetWorldTimerManager().SetTimer(WaitTimer, this, &AElevator::CloseDoors, ElevatorWaitTime);
+	}
 }
 
 void AElevator::OnRep_ElevatorState()
@@ -213,6 +215,12 @@ void AElevator::OnRep_ElevatorState()
 			AudioComponent->Play(0.f);
 		}
 	}
+}
+
+void AElevator::UpdateDoorPosition(float Output)
+{
+	LargeDoor->SetRelativeLocation(FVector(Output, -15.f, 0.f));
+	SmallDoor->SetRelativeLocation(FVector(Output * 2, -15.f, 0.f));
 }
 
 void AElevator::OnFloorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

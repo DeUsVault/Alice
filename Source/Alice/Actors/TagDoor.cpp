@@ -26,15 +26,6 @@ ATagDoor::ATagDoor()
 
 }
 
-void ATagDoor::SpawnGoalRoom()
-{
-	if (GoalRoomClass)
-	{
-		FActorSpawnParameters SpawnParams;
-		GoalRoom = GetWorld()->SpawnActor<AActor>(GoalRoomClass, GetActorLocation(), FRotator(0.f, GetActorRotation().Yaw + 180.f, 0.f), SpawnParams);
-	}
-}
-
 void ATagDoor::BeginPlay()
 {
 	Super::BeginPlay();
@@ -125,3 +116,11 @@ void ATagDoor::MulticastLockedDoor_Implementation()
 	if (LockedCue) UGameplayStatics::PlaySoundAtLocation(this, LockedCue, GetActorLocation());
 }
 
+void ATagDoor::SpawnGoalRoom()
+{
+	if (GoalRoomClass)
+	{
+		FActorSpawnParameters SpawnParams;
+		GoalRoom = GetWorld()->SpawnActor<AActor>(GoalRoomClass, GetActorLocation(), FRotator(0.f, GetActorRotation().Yaw + 180.f, 0.f), SpawnParams);
+	}
+}
