@@ -19,6 +19,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void PlayerEliminated(class AAliceCharacter* ElimmedCharacter, class AAlicePlayerController* VictimController, AAlicePlayerController* AttackerController);
 	virtual void PlayerLeftGame(class ABlasterPlayerState* PlayerLeaving);
+	UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 	UPROPERTY(EditDefaultsOnly)
 	float WarmupTime = 30.f;
@@ -37,6 +38,13 @@ protected:
 
 private:
 	float CountdownTime = 0.f;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UClass> TaggerPawnClass;
+
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UClass> AlicePawnClass;
+
 
 public:
 	float GetCountdownTime() const { return CountdownTime; }

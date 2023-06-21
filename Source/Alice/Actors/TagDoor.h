@@ -70,13 +70,9 @@ private:
 	
 	FOnTimelineFloat OpenUpdateFloat;
 	FOnTimelineFloat LockedUpdateFloat;
-	FOnTimelineEvent EventTest;
 	
 	UFUNCTION()
 	void UpdateDoorRotation(float Output);
-
-	UFUNCTION()
-	void EventUpdate();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastLockedDoor();

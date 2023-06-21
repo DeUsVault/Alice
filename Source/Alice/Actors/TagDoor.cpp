@@ -19,8 +19,8 @@ ATagDoor::ATagDoor()
 	DoorOpenTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Open Timeline"));
 	DoorLockedTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("Door Locked Timeline"));
 
-	Wall->SetupAttachment(RootComponent);
-	DoorFrame->SetupAttachment(Wall);
+	SetRootComponent(Wall);
+	DoorFrame->SetupAttachment(RootComponent);
 	Door->SetupAttachment(DoorFrame);
 	Knob->SetupAttachment(Door);
 
@@ -32,12 +32,10 @@ void ATagDoor::BeginPlay()
 	
 	OpenUpdateFloat.BindDynamic(this, &ATagDoor::UpdateDoorRotation);
 	LockedUpdateFloat.BindDynamic(this, &ATagDoor::UpdateDoorRotation);
-	EventTest.BindDynamic(this, &ATagDoor::EventUpdate);
 
 	if (DoorOpenFloatCurve && DoorOpenTimeline)
 	{
 		DoorOpenTimeline->AddInterpFloat(DoorOpenFloatCurve, OpenUpdateFloat);
-		DoorOpenTimeline->AddEvent(0.1f, EventTest);
 	}
 
 	if (DoorLockedFloatCurve && DoorLockedTimeline)
@@ -103,11 +101,6 @@ void ATagDoor::OnRep_bIsOpen()
 void ATagDoor::UpdateDoorRotation(float Output)
 {
 	Door->SetRelativeRotation(FRotator(0.0f, Output, 0.f));
-}
-
-void ATagDoor::EventUpdate()
-{
-	if (!DoorOpenTimeline->IsReversing()) UE_LOG(LogTemp, Warning, TEXT("Event triggered: %f"), DoorOpenTimeline->GetPlaybackPosition());
 }
 
 void ATagDoor::MulticastLockedDoor_Implementation()

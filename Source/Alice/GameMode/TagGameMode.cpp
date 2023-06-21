@@ -8,6 +8,9 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "GameFramework/GameState.h"
+#include "GameFramework/PlayerState.h"
+#include "Alice/PlayerController/AlicePlayerController.h"
 
 namespace MatchState
 {
@@ -24,8 +27,6 @@ void ATagGameMode::BeginPlay()
 	Super::BeginPlay();
 
 	LevelStartingTime = GetWorld()->GetTimeSeconds();
-
-
 }
 
 void ATagGameMode::Tick(float DeltaTime)
@@ -62,7 +63,20 @@ void ATagGameMode::OnMatchStateSet()
 {
 	Super::OnMatchStateSet();
 
-	if (MatchState == MatchState::InProgress)
+	if (MatchState == MatchState::WaitingToStart)
+	{
+		int32 NumberOfPlayers = GameState.Get()->PlayerArray.Num();
+		if (NumberOfPlayers < 10)
+		{
+			AAlicePlayerController* PlayerController = Cast<AAlicePlayerController>(GameState->PlayerArray[0]->GetOwner());
+			PlayerController->bIsTagger = true;
+		}
+		else
+		{
+
+		}
+	}
+	else if (MatchState == MatchState::InProgress)
 	{
 		// Activate one of the doors and spawn the goal room
 		TArray<AActor*> Doors;
@@ -135,4 +149,15 @@ void ATagGameMode::PlayerLeftGame(ABlasterPlayerState* PlayerLeaving)
 	{
 		CharacterLeaving->Elim(true);
 	}*/
+}
+
+UClass* ATagGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	AAlicePlayerController* AlicePlayerController = Cast<AAlicePlayerController>(InController);
+	if (AlicePlayerController && AlicePlayerController->bIsTagger)
+	{
+		return TaggerPawnClass;
+	}
+	
+	return AlicePawnClass;
 }

@@ -16,6 +16,7 @@ class ALICE_API AAlicePlayerController : public APlayerController
 
 public:
 	void AddCharacterOverlay();
+	bool bIsTagger = false;
 
 protected:
 

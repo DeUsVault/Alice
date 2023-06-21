@@ -1,6 +1,7 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "AliceCharacter.h"
+
+#include "TaggerCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -12,15 +13,14 @@
 #include "Alice/Interfaces/Interactable.h"
 #include "Alice/PlayerController/AlicePlayerController.h"
 
-
 //////////////////////////////////////////////////////////////////////////
 // AAliceCharacter
 
-AAliceCharacter::AAliceCharacter()
+ATaggerCharacter::ATaggerCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -47,7 +47,7 @@ AAliceCharacter::AAliceCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
-void AAliceCharacter::Restart()
+void ATaggerCharacter::Restart()
 {
 	Super::Restart();
 
@@ -64,15 +64,15 @@ void AAliceCharacter::Restart()
 	}
 }
 
-void AAliceCharacter::BeginPlay()
+void ATaggerCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
 
-	
+
 }
 
-void AAliceCharacter::Tick(float DeltaTime)
+void ATaggerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
@@ -81,33 +81,25 @@ void AAliceCharacter::Tick(float DeltaTime)
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void AAliceCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+void ATaggerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
-		//Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		//Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAliceCharacter::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATaggerCharacter::Move);
 
 		//Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAliceCharacter::Look);
-
-		//Crouching
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AAliceCharacter::CrouchButtonPressed);
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AAliceCharacter::CrouchButtonReleased);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATaggerCharacter::Look);
 
 		//Interact
-		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AAliceCharacter::InteractButtonPressed);
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ATaggerCharacter::InteractButtonPressed);
 
 	}
 
 }
 
-void AAliceCharacter::Move(const FInputActionValue& Value)
+void ATaggerCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -119,7 +111,7 @@ void AAliceCharacter::Move(const FInputActionValue& Value)
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
+
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
@@ -129,7 +121,7 @@ void AAliceCharacter::Move(const FInputActionValue& Value)
 	}
 }
 
-void AAliceCharacter::Look(const FInputActionValue& Value)
+void ATaggerCharacter::Look(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
@@ -142,17 +134,7 @@ void AAliceCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
-void AAliceCharacter::CrouchButtonPressed()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Crouch button pressed"));
-	bIsCrouched ? UnCrouch() : Crouch();
-}
-
-void AAliceCharacter::CrouchButtonReleased()
-{
-}
-
-void AAliceCharacter::InteractButtonPressed()
+void ATaggerCharacter::InteractButtonPressed()
 {
 	// Check if player is actually looking at something interactable locally, then check from Server
 	FVector TraceStart = FollowCamera->GetComponentLocation();
@@ -169,7 +151,7 @@ void AAliceCharacter::InteractButtonPressed()
 	}
 }
 
-void AAliceCharacter::ServerInteract_Implementation()
+void ATaggerCharacter::ServerInteract_Implementation()
 {
 	UE_LOG(LogTemp, Display, TEXT("ServerRPC: ServerInteract called by %s"), *GetActorNameOrLabel());
 	FVector TraceStart = FollowCamera->GetComponentLocation();
@@ -188,9 +170,6 @@ void AAliceCharacter::ServerInteract_Implementation()
 			}
 		}
 	}
-	
+
 }
-
-
-
 

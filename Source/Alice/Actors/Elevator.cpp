@@ -163,6 +163,7 @@ void AElevator::CloseDoors()
 	ElevatorState = EElevatorState::DOORS_CLOSING;
 }
 
+// Called when doors finish closing animation
 void AElevator::CheckElevatorQueue()
 {
 	if (DoorOpenTimeline->IsPlaying()) return; // Ignore doors opened event if they have just started closing (saves having two separate open/close timelines)
@@ -189,6 +190,7 @@ void AElevator::CheckElevatorQueue()
 	}
 }
 
+// Called when doors finish opening animation
 void AElevator::EnterWaitState()
 {
 	if (DoorOpenTimeline->IsPlaying()) return; // Ignore doors closed event if they have just started opening (saves having two separate open/close timelines)
