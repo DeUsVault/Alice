@@ -19,6 +19,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void PlayerEliminated(class AAliceCharacter* ElimmedCharacter, class AAlicePlayerController* VictimController, AAlicePlayerController* AttackerController);
 	virtual void PlayerLeftGame(class ABlasterPlayerState* PlayerLeaving);
+	virtual void HandleMatchHasStarted() override;
 	UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -44,6 +45,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UClass> AlicePawnClass;
+
+	void ChooseGoalRoom();
+	void ChooseTagger();
 
 
 public:

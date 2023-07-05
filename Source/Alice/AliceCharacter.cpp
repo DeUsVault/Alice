@@ -47,6 +47,18 @@ AAliceCharacter::AAliceCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+void AAliceCharacter::MulticastUpdateMovementSpeed_Implementation(bool bSlow)
+{
+	if (bSlow)
+	{
+		GetCharacterMovement()->MaxWalkSpeed *= SlowFactor;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed /= SlowFactor;
+	}
+}
+
 void AAliceCharacter::Restart()
 {
 	Super::Restart();
@@ -54,8 +66,6 @@ void AAliceCharacter::Restart()
 	AAlicePlayerController* PlayerController = Cast<AAlicePlayerController>(Controller);
 	if (PlayerController)
 	{
-		Cast<AAlicePlayerController>(Controller)->AddCharacterOverlay();
-
 		//Add Input Mapping Context
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -69,13 +79,27 @@ void AAliceCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-	
+	if (HasAuthority())
+	{
+		OnTakeAnyDamage.AddDynamic(this, &AAliceCharacter::ReceiveDamage);
+	}
 }
 
 void AAliceCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AAliceCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, AController* InstigatorController, AActor* DamageCauser)
+{
+	UE_LOG(LogTemp, Display, TEXT("%s received %f damage"), *GetName(), Damage);
+	Health -= Damage;
+
+	if (Health <= 0)
+	{
+		Destroy();
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////

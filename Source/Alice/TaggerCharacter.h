@@ -32,9 +32,16 @@ class ALICE_API ATaggerCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* InteractAction;
 
-public:
-		ATaggerCharacter();
+	/** Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* FireAction;
 
+public:
+	ATaggerCharacter();
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastUpdateMovementSpeed(bool bSlow);
 
 protected:
 
@@ -56,11 +63,58 @@ protected:
 
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION(Server, Reliable)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
+
 public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 private:
+
+	void FireButtonPressed();
+	void LocalFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float SlowFactor = 0.5f;
+
+	/*
+	Weapons
+	*/
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
+	TObjectPtr<class AWeapon> EquippedWeapon;
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TSubclassOf<AWeapon> DefaultWeaponClass;
+	void AddDefaultWeapon();
+	void EquipWeapon(AWeapon* WeaponToEquip);
+	UFUNCTION()
+	void OnRep_EquippedWeapon();
+	void AttachActorToSocket(AActor* ActorToAttach, FName Socket);
+	bool bCanFire = true;
+	FTimerHandle FireDelayTimer;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TObjectPtr<UParticleSystem> TrailParticles;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TObjectPtr<UParticleSystem> MuzzleFlashSystem;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TObjectPtr<UParticleSystem> ImpactParticlesSystem;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TObjectPtr<class USoundCue> FireSound;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon")
+	TObjectPtr<UMaterialInterface> BulletHoleMaterial;
+
+	/*
+	Interaction
+	*/
+
 	UPROPERTY(EditAnywhere)
 	float InteractRange = 150.f;
 	void InteractButtonPressed();

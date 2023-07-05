@@ -47,3 +47,13 @@ void AAliceHUD::AddCharacterOverlay()
 		CharacterOverlay->AddToViewport();
 	}
 }
+
+void AAliceHUD::AddTaggerOverlay()
+{
+	APlayerController* PlayerController = GetOwningPlayerController();
+	if (PlayerController && TaggerOverlayClass)
+	{
+		TaggerOverlay = CreateWidget<UUserWidget>(PlayerController, TaggerOverlayClass);
+		TaggerOverlay->AddToViewport();
+	}
+}

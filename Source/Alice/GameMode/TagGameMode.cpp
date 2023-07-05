@@ -65,27 +65,11 @@ void ATagGameMode::OnMatchStateSet()
 
 	if (MatchState == MatchState::WaitingToStart)
 	{
-		int32 NumberOfPlayers = GameState.Get()->PlayerArray.Num();
-		if (NumberOfPlayers < 10)
-		{
-			AAlicePlayerController* PlayerController = Cast<AAlicePlayerController>(GameState->PlayerArray[0]->GetOwner());
-			PlayerController->bIsTagger = true;
-		}
-		else
-		{
-
-		}
+		
 	}
 	else if (MatchState == MatchState::InProgress)
 	{
-		// Activate one of the doors and spawn the goal room
-		TArray<AActor*> Doors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATagDoor::StaticClass(), Doors);
-		UE_LOG(LogTemp, Warning, TEXT("Number of Doors found: %d"), Doors.Num());
-		int32 GoalDoorNumber = UKismetMathLibrary::RandomIntegerInRange(0, Doors.Num() - 1);
-		UE_LOG(LogTemp, Warning, TEXT("Selected Door: %s"), *Doors[GoalDoorNumber]->GetActorNameOrLabel());
-		ATagDoor* GoalDoor = Cast<ATagDoor>(Doors[GoalDoorNumber]);
-		GoalDoor->UnlockDoor();
+		ChooseGoalRoom();
 	}
 	/*for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
@@ -95,6 +79,18 @@ void ATagGameMode::OnMatchStateSet()
 			AlicePlayer->OnMatchStateSet(MatchState);
 		}
 	}*/
+}
+
+// Activate one of the doors to serve as the goal room entrance
+void ATagGameMode::ChooseGoalRoom()
+{
+	TArray<AActor*> Doors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ATagDoor::StaticClass(), Doors);
+	UE_LOG(LogTemp, Warning, TEXT("Number of Doors found: %d"), Doors.Num());
+	int32 GoalDoorNumber = UKismetMathLibrary::RandomIntegerInRange(0, Doors.Num() - 1);
+	UE_LOG(LogTemp, Warning, TEXT("Selected Door: %s"), *Doors[GoalDoorNumber]->GetActorNameOrLabel());
+	ATagDoor* GoalDoor = Cast<ATagDoor>(Doors[GoalDoorNumber]);
+	GoalDoor->UnlockDoor();
 }
 
 void ATagGameMode::PlayerEliminated(AAliceCharacter* ElimmedCharacter, AAlicePlayerController* VictimController, AAlicePlayerController* AttackerController)
@@ -151,13 +147,50 @@ void ATagGameMode::PlayerLeftGame(ABlasterPlayerState* PlayerLeaving)
 	}*/
 }
 
+void ATagGameMode::HandleMatchHasStarted()
+{
+	ChooseTagger();
+
+	Super::HandleMatchHasStarted();
+}
+
 UClass* ATagGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
 {
 	AAlicePlayerController* AlicePlayerController = Cast<AAlicePlayerController>(InController);
-	if (AlicePlayerController && AlicePlayerController->bIsTagger)
+	if (AlicePlayerController && AlicePlayerController->Team == ETeam::ET_Tagger)
 	{
 		return TaggerPawnClass;
 	}
 	
 	return AlicePawnClass;
+}
+
+void ATagGameMode::ChooseTagger()
+{
+	UE_LOG(LogTemp, Warning, TEXT("NumPlayers: %d, Size of PlayerState array: %d"), NumPlayers, GameState.Get()->PlayerArray.Num());
+	if (NumPlayers >= 2)
+	{
+		int32 TaggerIndex = UKismetMathLibrary::RandomIntegerInRange(0, NumPlayers - 1);
+		UE_LOG(LogTemp, Display, TEXT("Tagger index: %d"), TaggerIndex);
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+
+			if (AAlicePlayerController* PC = Cast<AAlicePlayerController>(It->Get()))
+			{
+				if (It.GetIndex() == TaggerIndex)
+				{
+					PC->Team = ETeam::ET_Tagger;
+				}
+				else
+				{
+					PC->Team = ETeam::ET_Alice;
+				}
+				PC->AddCharacterOverlay();
+			}
+		}
+	}
+	else
+	{
+
+	}
 }

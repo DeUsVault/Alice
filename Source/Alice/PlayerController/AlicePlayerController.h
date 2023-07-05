@@ -6,6 +6,16 @@
 #include "GameFramework/PlayerController.h"
 #include "AlicePlayerController.generated.h"
 
+UENUM(BlueprintType)
+enum class ETeam : uint8
+{
+	ET_NoTeam UMETA(DisplayName = "No Team"),
+	ET_Alice UMETA(DisplayName = "Alice"),
+	ET_Tagger UMETA(DisplayName = "Tagger"),
+	
+	ET_MAX UMETA(Hidden)
+};
+
 /**
  * 
  */
@@ -16,10 +26,16 @@ class ALICE_API AAlicePlayerController : public APlayerController
 
 public:
 	void AddCharacterOverlay();
-	bool bIsTagger = false;
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Team)
+	ETeam Team = ETeam::ET_NoTeam;
 
 protected:
 
 private:
 	TObjectPtr<class AAliceHUD> AliceHUD;
+
+	UFUNCTION()
+	void OnRep_Team();
 };

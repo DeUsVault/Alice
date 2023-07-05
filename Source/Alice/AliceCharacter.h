@@ -44,6 +44,8 @@ class AAliceCharacter : public ACharacter
 public:
 	AAliceCharacter();
 	
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastUpdateMovementSpeed(bool bSlow);
 
 protected:
 
@@ -65,11 +67,23 @@ protected:
 
 	virtual void Tick(float DeltaTime) override;
 
+	UFUNCTION()
+	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType, class AController* InstigatorController, AActor* DamageCauser);
+
 public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE bool HasEnteredGate() { return bHasEnteredGate; }
+	FORCEINLINE void SetHasEnteredGate(bool HasEntered) { bHasEnteredGate = HasEntered; }
 
 private:
+	float Health = 100.f;
+
+	UPROPERTY(EditAnywhere, Category = "Movement")
+	float SlowFactor = 0.5f;
+
+	bool bHasEnteredGate = false;
+
 	UPROPERTY(EditAnywhere)
 	float InteractRange = 150.f;
 	void CrouchButtonPressed();

@@ -12,6 +12,15 @@
 #include "EnhancedInputSubsystems.h"
 #include "Alice/Interfaces/Interactable.h"
 #include "Alice/PlayerController/AlicePlayerController.h"
+#include "Alice/Weapons/Weapon.h"
+#include "Engine/SkeletalMeshSocket.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Alice/AliceCharacter.h"
+#include "Sound/SoundCue.h"
+#include "Components/DecalComponent.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AAliceCharacter
@@ -47,6 +56,25 @@ ATaggerCharacter::ATaggerCharacter()
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
 
+void ATaggerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATaggerCharacter, EquippedWeapon);
+}
+
+void ATaggerCharacter::MulticastUpdateMovementSpeed_Implementation(bool bSlow)
+{
+	if (bSlow)
+	{
+		GetCharacterMovement()->MaxWalkSpeed *= SlowFactor;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed /= SlowFactor;
+	}
+}
+
 void ATaggerCharacter::Restart()
 {
 	Super::Restart();
@@ -54,8 +82,6 @@ void ATaggerCharacter::Restart()
 	AAlicePlayerController* PlayerController = Cast<AAlicePlayerController>(Controller);
 	if (PlayerController)
 	{
-		Cast<AAlicePlayerController>(Controller)->AddCharacterOverlay();
-
 		//Add Input Mapping Context
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
@@ -69,7 +95,11 @@ void ATaggerCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
-
+	if (HasAuthority())
+	{
+		AddDefaultWeapon();
+	}
+	
 }
 
 void ATaggerCharacter::Tick(float DeltaTime)
@@ -94,6 +124,9 @@ void ATaggerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerIn
 
 		//Interact
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &ATaggerCharacter::InteractButtonPressed);
+
+		//Shoot
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &ATaggerCharacter::FireButtonPressed);
 
 	}
 
@@ -170,6 +203,172 @@ void ATaggerCharacter::ServerInteract_Implementation()
 			}
 		}
 	}
-
 }
 
+void ATaggerCharacter::FireButtonPressed()
+{
+	if (EquippedWeapon && !EquippedWeapon->IsEmpty() && bCanFire)
+	{
+		EquippedWeapon->Fire(); // Decrement ammo and play fire animation
+		bCanFire = false; // Fire Delay
+		GetWorldTimerManager().SetTimer(FireDelayTimer, [this] {bCanFire = true; }, EquippedWeapon->GetWeaponFireDelay(), false);
+		
+		// Trace from Camera to Crosshairs for damage calculation
+		UWorld* World = GetWorld();
+		if (World)
+		{
+			const FVector TraceStart = FollowCamera->GetComponentLocation();
+			FVector TraceEnd;
+			if (EquippedWeapon->bUseSpread)
+			{
+				const int32 RandomSeed = FMath::Rand();
+				FRandomStream WeaponRandomStream(RandomSeed);
+				const float ConeHalfAngle = FMath::DegreesToRadians(EquippedWeapon->GetWeaponSpread() * 0.5f);
+				const FVector ShootDir = WeaponRandomStream.VRandCone(FollowCamera->GetForwardVector(), ConeHalfAngle, ConeHalfAngle);
+				TraceEnd = TraceStart + ShootDir * TRACE_LENGTH;
+				//DrawDebugLine(World, TraceStart, TraceEnd, FColor::Cyan, true);
+			}
+			else // Weapon has no Spread
+			{
+				TraceEnd = FollowCamera->GetComponentLocation() + TRACE_LENGTH * FollowCamera->GetForwardVector();
+			}
+			
+			if (!HasAuthority())
+			{
+				LocalFire(TraceEnd);
+			}
+
+			ServerFire(TraceEnd);
+		}
+	}
+}
+
+void ATaggerCharacter::LocalFire(const FVector_NetQuantize& TraceHitTarget)
+{
+	//PlayFireMontage();
+	
+	// Trace from Gun Muzzle to Crosshairs for trail effect
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		FHitResult LocalHit;
+		World->LineTraceSingleByChannel(LocalHit, GetFollowCamera()->GetComponentLocation(), TraceHitTarget, ECC_Visibility);
+
+		if (!LocalHit.bBlockingHit)
+		{
+			LocalHit.ImpactPoint = TraceHitTarget;
+		}
+
+		if (HasAuthority() && LocalHit.bBlockingHit)
+		{
+			AAliceCharacter* AliceCharacter = Cast<AAliceCharacter>(LocalHit.GetActor());
+			if (AliceCharacter)
+			{
+				float DamageToApply = EquippedWeapon->GetBaseDamage();
+				if (LocalHit.BoneName == FName("head"))
+				{
+					DamageToApply *= 2.f;
+				}
+				UGameplayStatics::ApplyDamage(AliceCharacter, DamageToApply, GetController(), this, UDamageType::StaticClass());
+			}
+		}
+
+		const USkeletalMeshSocket* MuzzleFlashSocket = EquippedWeapon->GetWeaponMesh()->GetSocketByName("MuzzleFlashSocket");
+		if (MuzzleFlashSocket)
+		{
+			FTransform SocketTransform = MuzzleFlashSocket->GetSocketTransform(EquippedWeapon->GetWeaponMesh());
+			FVector BulletStart = SocketTransform.GetLocation();
+			
+			if (TrailParticles)
+			{
+				UParticleSystemComponent* Trail = UGameplayStatics::SpawnEmitterAtLocation(World, TrailParticles, BulletStart, FRotator::ZeroRotator, true);
+				if (Trail)
+				{
+					Trail->SetVectorParameter(FName("Target"), LocalHit.ImpactPoint);
+				}
+			}
+
+			if (MuzzleFlashSystem)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlashSystem, SocketTransform);
+			}
+
+			if (FireSound)
+			{
+				UGameplayStatics::PlaySoundAtLocation(this, FireSound, BulletStart);
+			}
+
+			if (ImpactParticlesSystem && LocalHit.bBlockingHit)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticlesSystem, LocalHit.ImpactPoint, LocalHit.ImpactNormal.Rotation());
+			}
+
+			if (BulletHoleMaterial && LocalHit.bBlockingHit)
+			{
+				UDecalComponent* BulletHoleDecal = UGameplayStatics::SpawnDecalAttached(BulletHoleMaterial, FVector(2.f, 2.f, 2.f), LocalHit.GetComponent(), NAME_None, LocalHit.ImpactPoint, FRotationMatrix::MakeFromX(LocalHit.Normal).Rotator(), EAttachLocation::KeepWorldPosition, 20.f);
+				if (BulletHoleDecal)
+				{
+					BulletHoleDecal->SetFadeScreenSize(0.f);
+					BulletHoleDecal->AddRelativeRotation(FRotator(0.f, 0.f, FMath::FRandRange(0.f, 360.f))); // Random rotation about normal
+				}
+			}
+		}
+	}
+}
+
+void ATaggerCharacter::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	MulticastFire(TraceHitTarget);
+}
+
+void ATaggerCharacter::MulticastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	if (IsLocallyControlled() && !HasAuthority())
+	{
+		return;
+	}
+	LocalFire(TraceHitTarget);
+}
+
+void ATaggerCharacter::AddDefaultWeapon()
+{
+	UWorld* World = GetWorld();
+	if (World && DefaultWeaponClass)
+	{
+		AWeapon* DefaultWeapon = World->SpawnActor<AWeapon>(DefaultWeaponClass);
+		EquipWeapon(DefaultWeapon);
+	}
+}
+
+void ATaggerCharacter::EquipWeapon(AWeapon* WeaponToEquip)
+{
+	if (WeaponToEquip)
+	{
+		EquippedWeapon = WeaponToEquip;
+		EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
+		EquippedWeapon->SetOwner(this);
+		AttachActorToSocket(EquippedWeapon, FName("GunSocket"));
+	}
+}
+
+void ATaggerCharacter::OnRep_EquippedWeapon()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
+		AttachActorToSocket(EquippedWeapon, FName("GunSocket"));
+		//PlayEquipWeaponSound(EquippedWeapon);
+	}
+}
+
+void ATaggerCharacter::AttachActorToSocket(AActor* ActorToAttach, FName Socket)
+{
+	if (GetMesh() && ActorToAttach)
+	{
+		const USkeletalMeshSocket* SocketToAttach = GetMesh()->GetSocketByName(Socket);
+		if (SocketToAttach)
+		{
+			SocketToAttach->AttachActor(ActorToAttach, GetMesh());
+		}
+	}
+}

@@ -18,6 +18,7 @@ class ALICE_API AAliceHUD : public AHUD
 public:
 	virtual void DrawHUD() override;
 	void AddCharacterOverlay();
+	void AddTaggerOverlay();
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -25,6 +26,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UUserWidget> CharacterOverlayClass;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UUserWidget> TaggerOverlayClass;
 
 	TObjectPtr<UAliceCharacterOverlay> CharacterOverlay;
+	TObjectPtr<UUserWidget> TaggerOverlay;
 };
