@@ -16,6 +16,10 @@ class ALICE_API ATaggerCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+	/** Weapon Attach Point */
+	UPROPERTY(EditAnywhere)
+	class USceneComponent* WeaponAttachPoint;
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputMappingContext* DefaultMappingContext;
@@ -35,6 +39,8 @@ class ALICE_API ATaggerCharacter : public ACharacter
 	/** Fire Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* FireAction;
+
+	virtual void PostInitializeComponents() override;
 
 public:
 	ATaggerCharacter();

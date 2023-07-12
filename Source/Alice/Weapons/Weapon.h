@@ -70,7 +70,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = Combat)
 	bool bAutomaticWeapon = true;
 
-
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class ACasing> CasingClass;
 
 	/*
 	Scatter
@@ -87,5 +88,6 @@ public:
 	float GetWeaponSpread() { return SpreadDegrees; }
 	float GetWeaponFireDelay() { return FireDelay; }
 	float GetBaseDamage() { return BaseDamage; }
+	EWeaponType GetWeaponType() { return WeaponType; }
 	USkeletalMeshComponent* GetWeaponMesh() { return WeaponMesh; }
 };

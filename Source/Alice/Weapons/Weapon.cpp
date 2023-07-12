@@ -2,6 +2,8 @@
 
 
 #include "Weapon.h"
+#include "Alice/Actors/Casing.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 AWeapon::AWeapon()
 {
@@ -30,6 +32,20 @@ void AWeapon::Fire()
 	if (FireAnimation)
 	{
 		WeaponMesh->PlayAnimation(FireAnimation, false);
+	}
+
+	if (CasingClass)
+	{
+		const USkeletalMeshSocket* CasingEjectSocket = WeaponMesh->GetSocketByName("CasingEjectSocket");
+		if (CasingEjectSocket)
+		{
+			FTransform SocketTransform = CasingEjectSocket->GetSocketTransform(WeaponMesh);
+			UWorld* World = GetWorld();
+			if (World)
+			{
+				World->SpawnActor<ACasing>(CasingClass, SocketTransform);
+			}
+		}
 	}
 
 	Ammo = FMath::Clamp(Ammo - 1, 0, MagazineCapacity);

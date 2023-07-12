@@ -49,11 +49,29 @@ ATaggerCharacter::ATaggerCharacter()
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(GetMesh(), FName("head")); // Attach the camera to the mesh
+	FollowCamera->SetupAttachment(GetCapsuleComponent()); // Attach the camera to the capsule
 	FollowCamera->bUsePawnControlRotation = true; // Camera does not rotate relative to arm
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	// Local player can't see third person player mesh
+	GetMesh()->bOnlyOwnerSee = false;
+	GetMesh()->bOwnerNoSee = true;
+	GetMesh()->bReceivesDecals = false;
+
+	WeaponAttachPoint = CreateDefaultSubobject<USceneComponent>(TEXT("Weapon Attach Point"));
+	WeaponAttachPoint->SetupAttachment(FollowCamera);
+}
+
+void ATaggerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (HasAuthority())
+	{
+		AddDefaultWeapon();
+	}
 }
 
 void ATaggerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -91,14 +109,8 @@ void ATaggerCharacter::Restart()
 }
 
 void ATaggerCharacter::BeginPlay()
-{
-	// Call the base class  
+{ 
 	Super::BeginPlay();
-
-	if (HasAuthority())
-	{
-		AddDefaultWeapon();
-	}
 	
 }
 
@@ -209,7 +221,6 @@ void ATaggerCharacter::FireButtonPressed()
 {
 	if (EquippedWeapon && !EquippedWeapon->IsEmpty() && bCanFire)
 	{
-		EquippedWeapon->Fire(); // Decrement ammo and play fire animation
 		bCanFire = false; // Fire Delay
 		GetWorldTimerManager().SetTimer(FireDelayTimer, [this] {bCanFire = true; }, EquippedWeapon->GetWeaponFireDelay(), false);
 		
@@ -246,7 +257,7 @@ void ATaggerCharacter::FireButtonPressed()
 void ATaggerCharacter::LocalFire(const FVector_NetQuantize& TraceHitTarget)
 {
 	//PlayFireMontage();
-	
+	EquippedWeapon->Fire(); // Decrement ammo and play fire animation
 	// Trace from Gun Muzzle to Crosshairs for trail effect
 	UWorld* World = GetWorld();
 	if (World)
@@ -347,7 +358,14 @@ void ATaggerCharacter::EquipWeapon(AWeapon* WeaponToEquip)
 		EquippedWeapon = WeaponToEquip;
 		EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
 		EquippedWeapon->SetOwner(this);
-		AttachActorToSocket(EquippedWeapon, FName("GunSocket"));
+		EquippedWeapon->AttachToComponent(WeaponAttachPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		if (EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SMG)
+		{
+			EquippedWeapon->GetWeaponMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			EquippedWeapon->GetWeaponMesh()->SetEnableGravity(true);
+			EquippedWeapon->GetWeaponMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
+		}
+		/*AttachActorToSocket(EquippedWeapon, FName("GunSocket"));*/
 	}
 }
 
@@ -356,7 +374,13 @@ void ATaggerCharacter::OnRep_EquippedWeapon()
 	if (EquippedWeapon)
 	{
 		EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
-		AttachActorToSocket(EquippedWeapon, FName("GunSocket"));
+		EquippedWeapon->AttachToComponent(WeaponAttachPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
+		if (EquippedWeapon->GetWeaponType() == EWeaponType::EWT_SMG)
+		{
+			EquippedWeapon->GetWeaponMesh()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			EquippedWeapon->GetWeaponMesh()->SetEnableGravity(true);
+			EquippedWeapon->GetWeaponMesh()->SetCollisionResponseToAllChannels(ECR_Ignore);
+		}
 		//PlayEquipWeaponSound(EquippedWeapon);
 	}
 }
